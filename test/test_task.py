@@ -1,6 +1,8 @@
 import pytest
 from tasklib import TaskWarrior, Task
 
+# REVIEW: name does not match what the test checks (it verifies that GET / lists one
+# seeded task). Rename to something like test_get_lists_seeded_task.
 def test_task_done(client, tw, token):
     Task(tw, description="Test task").save()
     rv = client.get('/', headers = {'x-access-tokens': token})

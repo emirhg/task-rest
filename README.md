@@ -94,16 +94,21 @@ Body:
   "due": date,
   "project": "PROJECT",
   "tags": ["TAG_1", "TAG_2"]
+# BUG: "hide" is not a field in TaskSchema (task_rest/schemas.py), so it is silently dropped.
   "hide": date,
   "scheduled": date,
   "start": date
 }
 ```
 
+<!-- TODO: GET, PUT and DELETE for this endpoint are not documented yet. -->
 ### `/<string:uuid>` endpoint
 #### GET
 #### PUT
 #### DELETE
 
+<!-- TODO: document the valid commands (done, restore, start, stop, add_annotation,
+remove_annotation, add_dependency, remove_dependency) and the GET /sync endpoint, which is
+not documented at all. -->
 ## `/<string:task_uuid>/<string:command>` endpoint
 #### PUT

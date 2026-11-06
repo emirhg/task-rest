@@ -45,6 +45,9 @@ def expose_errors(f):
     def decorator(*args, **kwargs):
         try:
             result = f(*args, **kwargs)
+        # BUG: TaskWarriorException is returned as HTTP 200 with an error body (e.g. /sync
+        # without a configured server). Should use an error status; left unchanged so
+        # existing clients keep working.
         except TaskWarriorException as e:
             error = '\n'.join([x for x in str(e).split('\n') if not (
                 x.startswith("Configuration override")
@@ -65,6 +68,9 @@ def expose_errors(f):
         return result
     return decorator
 
+# REVIEW: task['id'] is documented as 0 for completed/deleted tasks. Not reproduced on
+# Taskwarrior 3.5.0 (the 'Completed task N.' message showed the real id). Verify before
+# relying on the id in messages.
 def json_task_and_message(task, message, msg_type):
     return jsonify({
         'task': ts.dump(task),
@@ -77,6 +83,8 @@ def json_task_and_message(task, message, msg_type):
 def tw_for_user(user):
     return TaskWarrior(
         data_location=current_app.config['USER_CONF'][user]['TASKDATA_LOCATION'],
+        # BUG: TASKRC_LOCATION is optional in scripts/add_user.py, but read here
+        # unconditionally. A user without it raises KeyError (HTTP 500).
         taskrc_location=current_app.config['USER_CONF'][user]['TASKRC_LOCATION']
     )
 
@@ -110,6 +118,8 @@ class TaskListResource(Resource):
     method_decorators = [token_required, expose_errors]
     def get(self, user):
         tw = tw_for_user(user)
+        # REVIEW: on Taskwarrior 3.5.0 a recurring task (recur + due) was listed twice
+        # (template and instance?). Not verified whether this is expected.
         return jsonify({'tasks': ts.dump(tw.tasks.all(), many=True)})
 
     def post(self, user):
@@ -163,6 +173,9 @@ class TaskCommandResource(Resource):
             dep = tw.tasks.get(uuid = data['uuid'])
             task['depends'].remove(dep)
             task.save()
+        # REVIEW: msg is only bound inside the if/elif branches. The VALID_COMMANDS guard
+        # above makes the fall-through unreachable, but the dispatch is fragile.
+        # TODO: replace the if/elif chain with a dict of command -> (action, message).
         return json_task_and_message(task, msg, 'info')
 
 
@@ -170,6 +183,7 @@ class TaskServerResource(Resource):
     method_decorators = [token_required, expose_errors]
     def get(self, user):
         tw = tw_for_user(user)
+        # BUG: a sync failure is reported as HTTP 200 via expose_errors (see above).
         tw.sync()
         return jsonify({
             'message': {

@@ -18,9 +18,11 @@ def main():
 
     args = parser.parse_args()
 
+    # REVIEW: 'instance/config.json' is a relative path, so this only works from the repo root.
     with open('instance/config.json', 'r') as conf_file:
         config = json.load(conf_file)
 
+    # BUG: stray debug print left in; remove.
     print(args.user)
 
     if args.user:
@@ -33,6 +35,9 @@ def main():
     config[user] = {}
 
     if args.password:
+        # BUG: -p stores the password in plain text, but AuthResource verifies it with
+        # check_password_hash, so users created this way can never log in. Hash it as the
+        # interactive path does.
         config[user]['PASSWORD'] = args.password
     else:
         config[user]['PASSWORD'] = ''
@@ -72,6 +77,8 @@ def main():
         config[user]['TASKRC_LOCATION'] = args.taskrc_location
     else:
         taskrc_location = input("Enter alternative taskrc location (blank for default '~/.taskrc'): ").strip()
+        # BUG: a blank answer leaves TASKRC_LOCATION unset, but tw_for_user requires it
+        # (KeyError). Either always store a value or make tw_for_user tolerate its absence.
         if taskrc_location:
             config[user]['TASKRC_LOCATION'] = taskrc_location
 

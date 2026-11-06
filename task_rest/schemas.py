@@ -7,6 +7,8 @@ class TaskAnnotationSchema(Schema):
     entry = fields.DateTime(format="rfc", dump_only = True) # read-only
 
 
+# BUG: README documents a "hide" field on POST, but it is not defined here, so
+# unknown='EXCLUDE' (resources.py) silently drops it.
 class TaskSchema(Schema):
     description = fields.Str(required = True)
     due = fields.DateTime(format="rfc", missing=None)

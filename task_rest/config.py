@@ -12,6 +12,8 @@ class Config(object):
 
 
 class ProductionConfig(Config):
+    # BUG: SECRET_KEY is regenerated on every process start, so tokens are invalidated
+    # on restart and differ between worker processes. Persist it in instance/config.json.
     SECRET_KEY = urandom(16)
     USER_CONF = {}
     def __init__(self):
