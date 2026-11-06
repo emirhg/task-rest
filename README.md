@@ -13,11 +13,79 @@ Restful API for taskwarrior built with flask and tasklib.
 * tasklib
 * pyjwt
 
-## Setup
-Run `pipenv install` to install all python dependencies.
-Then `pipenv run add_user` and follow the instruction to configure a user.
-Test the server in development mode with `pipenv run serve`.
-See https://flask.palletsprojects.com/en/2.0.x/deploying/index.html for information on deploying flask apps.
+## Quick start
+
+### 1. Prerequisites
+- Python 3.9 and `pipenv`.
+- Taskwarrior 3.0 or newer: `task --version`.
+- A Taskwarrior config file. If you have never used Taskwarrior, create an empty one:
+  `touch ~/.taskrc`. Without it every request fails with "Cannot proceed without rc file.".
+
+### 2. Install
+    git clone https://github.com/emirhg/task-rest.git
+    cd task-rest
+    pipenv install
+
+### 3. Start without authentication (simplest)
+This mode uses your own Taskwarrior data (`~/.task` and `~/.taskrc`) and listens on
+`127.0.0.1` only. See "Running without authentication" below for the safety rules.
+
+    pipenv run serve_local
+
+The server prints a banner and then listens on http://127.0.0.1:5000. In another terminal:
+
+    # create a task; the response contains its "uuid"
+    curl -s -X POST http://127.0.0.1:5000/ -H 'Content-Type: application/json' \
+         -d '{"description": "Write README", "project": "docs", "tags": ["work"]}'
+
+    # list pending tasks
+    curl -s 'http://127.0.0.1:5000/?status=pending'
+
+    # start and complete it (replace UUID with the uuid from the response)
+    curl -s -X PUT http://127.0.0.1:5000/UUID/start
+    curl -s -X PUT http://127.0.0.1:5000/UUID/done
+
+    # only tasks that have been started
+    curl -s 'http://127.0.0.1:5000/?status=pending&start.any='
+
+Paths take the task's uuid, not its numeric id (`/1/start` returns 404). Stop the server with Ctrl+C.
+
+To try it on throwaway data first, point Taskwarrior at a temporary directory:
+
+    mkdir -p /tmp/task-rest-demo && touch /tmp/task-rest-demo/taskrc
+    TASKDATA=/tmp/task-rest-demo TASKRC=/tmp/task-rest-demo/taskrc pipenv run serve_local
+
+### 4. Start with authentication (several users, separate data)
+One-time setup. `add_user` needs `instance/config.json` to exist:
+
+    mkdir -p instance && echo '{}' > instance/config.json
+    pipenv run add_user
+
+Answer the prompts. For the taskdata and taskrc locations, enter explicit paths such as
+`/home/you/.task` and `/home/you/.taskrc`. Leaving them blank stores no paths for the user,
+and every request then fails with a server error (known issue, see the BUG notes in
+`task_rest/resources.py`).
+
+Start the server (the app must be named with `FLASK_APP`):
+
+    FLASK_APP=task_rest pipenv run flask run
+
+Get a token with the username and password you chose, then send it in the
+`x-access-tokens` header:
+
+    curl -s -u alice:YOUR_PASSWORD http://127.0.0.1:5000/auth
+    # {"token": "..."}
+    curl -s http://127.0.0.1:5000/ -H 'x-access-tokens: TOKEN'
+
+Tokens are invalidated when the server restarts (the signing key is generated per process).
+
+A built-in demo user `dev` with password `password` is available in development mode. Its data is
+kept in `instance/dev/`. Do not use it outside of trying the API:
+
+    FLASK_APP=task_rest FLASK_ENV=development pipenv run flask run
+    curl -s -u dev:password http://127.0.0.1:5000/auth
+
+For deploying the Flask app see https://flask.palletsprojects.com/en/2.0.x/deploying/index.html.
 
 ## Running without authentication (local mode)
 Taskwarrior has no users, so a single-user machine can run the API without tokens. Local mode
@@ -37,7 +105,10 @@ uses the running user's Taskwarrior defaults (`$TASKDATA`/`$TASKRC`, or `~/.task
 - The `/auth` route does not exist in local mode.
 
 ## Testing
-`pipenv run tests` runs the test suite.
+    pipenv install --dev
+    pipenv run tests
+
+The tests run against Taskwarrior in a temporary data directory and do not touch your own tasks.
 
 ## Schemas
 ```
