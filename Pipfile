@@ -26,6 +26,7 @@ python_version = "3.9"
 
 [scripts]
 serve = 'flask run'
+serve_local = 'python -m task_rest.serve --no-auth'
 tests = 'pytest'
 add_user = 'python scripts/add_user.py'
 delete_user = 'python scripts/delete_user.py'

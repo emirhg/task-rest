@@ -11,7 +11,7 @@ import json
 import jwt
 
 from task_rest.schemas import TaskSchema, TaskAnnotationSchema, DependantTaskSchema
-from task_rest.filters import FilterError, build_filter_terms
+from task_rest.filters import FilterError, build_filter_terms, is_uuid
 
 ts = TaskSchema(unknown='EXCLUDE')
 tas = TaskAnnotationSchema(unknown='EXCLUDE')
@@ -24,6 +24,9 @@ VALID_COMMANDS = ('done', 'restore', 'start', 'stop', 'add_annotation',
 def token_required(f):
     @wraps(f)
     def decorator(*args, **kwargs):
+        # Local mode (create_app(auth_enabled=False)): no user, any token header is ignored.
+        if not current_app.config.get('AUTH_ENABLED', True):
+            return f(None, *args, **kwargs)
         token = None
         try:
             token = request.headers['x-access-tokens']
@@ -83,7 +86,23 @@ def json_task_and_message(task, message, msg_type):
         }
     })
 
+def get_task(tw, task_uuid):
+    """Look a task up by uuid only.
+
+    tasklib's uuid lookup passes its value into Taskwarrior's filter list, so a
+    non-uuid path segment such as 'pending' would match descriptions. Anything that is
+    not a uuid is treated as "no such task" (404).
+    """
+    if not is_uuid(task_uuid):
+        raise Task.DoesNotExist('No task with uuid "{}".'.format(task_uuid))
+    return tw.tasks.get(uuid=task_uuid)
+
+
 def tw_for_user(user):
+    if user is None:
+        # Local mode: no explicit paths, so Taskwarrior uses $TASKDATA/$TASKRC or the
+        # running user's ~/.task and ~/.taskrc.
+        return TaskWarrior()
     return TaskWarrior(
         data_location=current_app.config['USER_CONF'][user]['TASKDATA_LOCATION'],
         # BUG: TASKRC_LOCATION is optional in scripts/add_user.py, but read here
@@ -96,13 +115,13 @@ class TaskResource(Resource):
     method_decorators = [token_required, expose_errors]
     def get(self, user, task_uuid):
         tw = tw_for_user(user)
-        task = tw.tasks.get(uuid = task_uuid)
+        task = get_task(tw, task_uuid)
         return jsonify({'task': ts.dump(task)})
 
     # task modify
     def put(self, user, task_uuid):
         tw = tw_for_user(user)
-        task = tw.tasks.get(uuid = task_uuid)
+        task = get_task(tw, task_uuid)
         data = ts.loads(request.data)
         for key in data:
             task[key] = data[key]
@@ -112,7 +131,7 @@ class TaskResource(Resource):
     # task delete
     def delete(self, user, task_uuid):
         tw = tw_for_user(user)
-        task = tw.tasks.get(uuid = task_uuid)
+        task = get_task(tw, task_uuid)
         task.delete()
         return json_task_and_message(task, 'Deleted task {}.', 'info')
 
@@ -148,7 +167,7 @@ class TaskCommandResource(Resource):
             return error_response('Unknown command "{}". Valid commands: {}.'.format(
                 command, ', '.join(VALID_COMMANDS)), 400)
         tw = tw_for_user(user)
-        task = tw.tasks.get(uuid = task_uuid)
+        task = get_task(tw, task_uuid)
         if command == 'done':
             msg = 'Completed task {}.'
             task.done()
@@ -173,13 +192,13 @@ class TaskCommandResource(Resource):
         elif command == 'add_dependency':
             msg = 'Added dependency to task {}'
             data = dts.loads(request.data)
-            dep = tw.tasks.get(uuid = data['uuid'])
+            dep = get_task(tw, data['uuid'])
             task['depends'].add(dep)
             task.save()
         elif command == 'remove_dependency':
             msg = 'Removed dependency to task {}'
             data = dts.loads(request.data)
-            dep = tw.tasks.get(uuid = data['uuid'])
+            dep = get_task(tw, data['uuid'])
             task['depends'].remove(dep)
             task.save()
         # REVIEW: msg is only bound inside the if/elif branches. The VALID_COMMANDS guard

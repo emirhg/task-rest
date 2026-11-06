@@ -17,6 +17,14 @@ def test_unknown_command_returns_400(client, token):
     assert json_data['message']['type'] == 'error'
     assert 'bogus' in json_data['message']['description']
 
+def test_non_uuid_path_does_not_match_tasks(client, tw, token):
+    # A path segment is a uuid, never a Taskwarrior filter (it must not match descriptions).
+    Task(tw, description='pending started').save()
+    headers = {'x-access-tokens': token}
+    assert client.get('/pending', headers=headers).status_code == 404
+    assert client.delete('/pending', headers=headers).status_code == 404
+    assert [t['description'] for t in tw.tasks.all()] == ['pending started']
+
 def test_get_unknown_task_returns_404(client, token):
     rv = client.get('/00000000-0000-0000-0000-000000000000',
                     headers = {'x-access-tokens': token})

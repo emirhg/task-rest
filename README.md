@@ -19,6 +19,23 @@ Then `pipenv run add_user` and follow the instruction to configure a user.
 Test the server in development mode with `pipenv run serve`.
 See https://flask.palletsprojects.com/en/2.0.x/deploying/index.html for information on deploying flask apps.
 
+## Running without authentication (local mode)
+Taskwarrior has no users, so a single-user machine can run the API without tokens. Local mode
+uses the running user's Taskwarrior defaults (`$TASKDATA`/`$TASKRC`, or `~/.task` and `~/.taskrc`).
+
+    pipenv run serve_local          # == python -m task_rest.serve --no-auth
+    python -m task_rest.serve --no-auth --port 5001
+
+- Authentication is only disabled by this explicit `--no-auth` flag. `flask run` and the WSGI
+  entry point always keep it on.
+- Bound to a loopback address (`127.0.0.1`, `localhost`, `::1`, the default), local mode:
+  - accepts requests only with a local `Host` header (blocks DNS rebinding);
+  - allows browser calls only from `localhost`, `127.0.0.1` and `[::1]` origins (CORS).
+- Bound to any other address (`0.0.0.0`, a LAN address, ...), the server prints a risk warning
+  and requires you to type `yes`. Without a terminal it refuses to start. Anyone who can reach
+  the address can read and change all of your tasks, and browser protections do not stop them.
+- The `/auth` route does not exist in local mode.
+
 ## Testing
 `pipenv run tests` runs the test suite.
 

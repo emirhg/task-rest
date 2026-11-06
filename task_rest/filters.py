@@ -56,6 +56,10 @@ _TAG_RE = re.compile(r'^[A-Za-z0-9_][A-Za-z0-9_.-]*$')
 _UNSAFE_RE = re.compile(r'[\x00-\x1f\x7f"\\]')
 
 
+def is_uuid(value):
+    return bool(_UUID_RE.match(value))
+
+
 def supported_names():
     names = []
     for attr, (_, mods) in sorted(ATTRIBUTES.items()):
