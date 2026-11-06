@@ -12,6 +12,8 @@ from os.path import join
 
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
+    # TODO: app.config["ENV"] was removed in Flask 2.3/3; replace with an explicit
+    # environment setting when porting to Flask 3 (pinned to Flask 2.x for now).
     if app.config["ENV"] == "production":
         app.config.from_object(ProductionConfig())
     else:

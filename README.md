@@ -4,7 +4,7 @@ Restful API for taskwarrior built with flask and tasklib.
 ## Dependancies
 * python3
 * pipenv
-* [taskwarrior](https://github.com/GothenburgBitFactory/taskwarrior)
+* [taskwarrior](https://github.com/GothenburgBitFactory/taskwarrior) 3.0 or newer (the tasklib fork in the Pipfile refuses 2.x)
 ### Python dependancies (see Pipfile)
 * flask
 * flask-restful

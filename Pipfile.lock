@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "acabb3367fbedfd2b2396075604057255a518fc7f4ddbdeddde2a50560b63b28"
+            "sha256": "b795e39425771a68d1631fb7190991732070baa709644dd6e0a92d4058cec0ea"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -163,19 +163,8 @@
             "version": "==1.16.0"
         },
         "tasklib": {
-            "hashes": [
-                "sha256:3645594147107c92780e19ac437f09eb8b8eac950209fb92d3f71869a721234e"
-            ],
-            "index": "pypi",
-            "version": "==2.4.0"
-        },
-        "tzlocal": {
-            "hashes": [
-                "sha256:c736f2540713deb5938d789ca7c3fc25391e9a20803f05b60ec64987cf086559",
-                "sha256:f4e6e36db50499e0d92f79b67361041f048e2609d166e93456b50746dc4aef12"
-            ],
-            "markers": "python_version >= '3.6'",
-            "version": "==3.0"
+            "git": "https://github.com/emirhg/tasklib.git",
+            "ref": "2c855bbd47849d3932336483381e82cf1355d92f"
         },
         "werkzeug": {
             "hashes": [

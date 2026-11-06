@@ -2,10 +2,12 @@ from functools import wraps
 from flask import current_app
 from flask import jsonify, request, make_response
 from flask_restful import Resource
+from marshmallow import ValidationError
 from tasklib import TaskWarrior, Task
 from tasklib.backends import TaskWarriorException
 from werkzeug.security import check_password_hash
 from datetime import datetime, timedelta
+import json
 import jwt
 
 from task_rest.schemas import TaskSchema, TaskAnnotationSchema, DependantTaskSchema
@@ -13,6 +15,9 @@ from task_rest.schemas import TaskSchema, TaskAnnotationSchema, DependantTaskSch
 ts = TaskSchema(unknown='EXCLUDE')
 tas = TaskAnnotationSchema(unknown='EXCLUDE')
 dts = DependantTaskSchema(unknown='EXCLUDE')
+
+VALID_COMMANDS = ('done', 'restore', 'start', 'stop', 'add_annotation',
+                  'remove_annotation', 'add_dependency', 'remove_dependency')
 
 
 def token_required(f):
@@ -28,6 +33,12 @@ def token_required(f):
 
         return f(user, *args, **kwargs)
     return decorator
+
+def error_response(description, status):
+    return make_response(jsonify({'message': {
+        'description': description,
+        'type': 'error'
+    }}), status)
 
 def expose_errors(f):
     @wraps(f)
@@ -45,6 +56,12 @@ def expose_errors(f):
                 'description': error,
                 'type': 'error'
             }})
+        except ValidationError as e:
+            result = error_response('Invalid input: ' + json.dumps(e.messages), 400)
+        except json.JSONDecodeError as e:
+            result = error_response('Malformed JSON body: ' + str(e), 400)
+        except Task.DoesNotExist as e:
+            result = error_response(str(e), 404)
         return result
     return decorator
 
@@ -108,6 +125,9 @@ class TaskListResource(Resource):
 class TaskCommandResource(Resource):
     method_decorators = [token_required, expose_errors]
     def put(self, user, task_uuid, command):
+        if command not in VALID_COMMANDS:
+            return error_response('Unknown command "{}". Valid commands: {}.'.format(
+                command, ', '.join(VALID_COMMANDS)), 400)
         tw = tw_for_user(user)
         task = tw.tasks.get(uuid = task_uuid)
         if command == 'done':

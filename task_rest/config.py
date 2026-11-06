@@ -25,6 +25,8 @@ class DevelopmentConfig(Config):
     USER_CONF = {
         "dev": {
             "TOKEN_EXP": 999,
+            # TODO: method='sha256' is not accepted by Werkzeug 3; move to scrypt/pbkdf2
+            # and regenerate stored password hashes when porting to Werkzeug 3.
             "PASSWORD": generate_password_hash('password', method='sha256'),
             "CORS_ORIGINS": '*',
             "TASKDATA_LOCATION": join(app.instance_path, "dev", ".task"),
