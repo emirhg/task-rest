@@ -11,6 +11,7 @@ import json
 import jwt
 
 from task_rest.schemas import TaskSchema, TaskAnnotationSchema, DependantTaskSchema
+from task_rest.filters import FilterError, build_filter_terms
 
 ts = TaskSchema(unknown='EXCLUDE')
 tas = TaskAnnotationSchema(unknown='EXCLUDE')
@@ -65,6 +66,8 @@ def expose_errors(f):
             result = error_response('Malformed JSON body: ' + str(e), 400)
         except Task.DoesNotExist as e:
             result = error_response(str(e), 404)
+        except FilterError as e:
+            result = error_response(str(e), 400)
         return result
     return decorator
 
@@ -117,11 +120,17 @@ class TaskResource(Resource):
 class TaskListResource(Resource):
     method_decorators = [token_required, expose_errors]
     def get(self, user):
+        # Validate filters before tw_for_user(): an invalid request must not spawn `task`.
+        terms = build_filter_terms(request.args.items(multi=True))
         tw = tw_for_user(user)
         # REVIEW: on Taskwarrior 3.5.0 a recurring task (recur + due) was listed twice
         # (template and instance?). Not verified whether this is expected.
-        return jsonify({'tasks': ts.dump(tw.tasks.all(), many=True)})
+        tasks = tw.tasks.filter(*terms) if terms else tw.tasks.all()
+        return jsonify({'tasks': ts.dump(tasks, many=True)})
 
+    # BUG: tasklib save() writes a project containing an apostrophe incorrectly: the task
+    # is created with description "project:'it's'" and no project (observed on TW 3.5.0).
+    # Affects this endpoint too. Needs a fix in the tasklib fork (quote values on add).
     def post(self, user):
         tw = tw_for_user(user)
         task = Task(tw)

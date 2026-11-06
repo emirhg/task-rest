@@ -73,7 +73,32 @@ JWT required for all other requests.
 
 ### `/` endpoint
 #### GET
-Get list of all tasks.
+Get list of tasks. Without parameters, all tasks are returned (including completed and deleted ones).
+
+Query parameters filter the list with TaskWarrior itself, using the TaskWarrior attribute names:
+
+| Parameter | Meaning (TaskWarrior equivalent) |
+|-----------|----------------------------------|
+| `status=pending` | `status:pending` |
+| `status.not=completed` | `status.not:completed` |
+| `project=NAME`, `project.has=X`, `project.not=X`, `project.any=`, `project.none=` | `project:"NAME"` and so on |
+| `priority=H`, `priority.not=L`, `priority.any=`, `priority.none=` | `priority:H` and so on |
+| `description.has=X`, `description.not=X` | `description.has:"X"` and so on |
+| `tags=work` | `+work` |
+| `tags.not=work` | `-work` |
+| `tags.any=`, `tags.none=` | `tags.any:`, `tags.none:` |
+| `uuid=UUID` | the task with that uuid |
+| `start`, `due`, `scheduled`, `wait`, `entry`, `end` with `=DATE` | `attr:"DATE"` |
+| `start.before=DATE`, `start.after=DATE`, `start.not=DATE` | `start.before:"DATE"` and so on |
+| `start.any=`, `start.none=` | `start.any:`, `start.none:` |
+
+- A bare attribute with an empty value (`start=`) means the attribute is **not set**, exactly as in TaskWarrior. Use `start.any=` for "is set".
+- `DATE` is `YYYY-MM-DD`, `YYYY-MM-DDTHH:MM[:SS][Z]`, or one of `now`, `today`, `sod`, `eod`, `yesterday`, `tomorrow`, `sow`, `eow`, `som`, `eom`, `soy`, `eoy`.
+- Parameters are combined with AND. Repeating a parameter adds another term (`?tags=work&tags=home` means `+work +home`).
+- Values may not contain `"`, `\`, or control characters (400). Values are passed to TaskWarrior as single arguments, never through a shell.
+- An unknown attribute or modifier, an invalid date, or a malformed value returns `400` with a message. `id` is not supported (it is not stable across changes).
+
+Example: `GET /?status=pending&start.any=` returns the pending tasks that have been started.
 #### Response
 ```
 {
