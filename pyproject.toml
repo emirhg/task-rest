@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "task-rest"
+version = "0.1.0"
+description = "Restful API for Taskwarrior built with Flask and tasklib."
+readme = "README.md"
+requires-python = ">=3.9"
+# Same pins as Pipfile [packages]; keep the two files in sync.
+dependencies = [
+    "flask==2.0.1",
+    "werkzeug==2.0.1",
+    "flask-restful==0.3.9",
+    "marshmallow==3.13.0",
+    "flask-cors==3.0.10",
+    "pyjwt==2.1.0",
+    # Taskwarrior 3 support lives in the emirhg fork of tasklib.
+    "tasklib @ git+https://github.com/emirhg/tasklib.git@2c855bbd47849d3932336483381e82cf1355d92f",
+]
+
+[project.scripts]
+task-rest = "task_rest.serve:main"
+
+[tool.setuptools]
+packages = ["task_rest"]
