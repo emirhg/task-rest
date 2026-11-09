@@ -25,3 +25,6 @@ task-rest = "task_rest.serve:main"
 
 [tool.setuptools]
 packages = ["task_rest"]
+
+[tool.setuptools.package-data]
+task_rest = ["docs/*"]

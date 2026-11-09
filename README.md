@@ -154,6 +154,16 @@ task {
 ```
 
 ## API
+### Documentation
+The API is documented as an OpenAPI 3 document, served without authentication in every mode:
+
+- `GET /docs/openapi.json`: the machine-readable spec (`task_rest/docs/openapi.json`).
+- `GET /` in a browser (a request that prefers `text/html`): a page that renders the spec.
+  API clients (`curl`, scripts, requests without an `Accept: text/html` header) still get the
+  JSON task list from `GET /`.
+
+    curl -s http://127.0.0.1:5000/docs/openapi.json
+
 ### `/auth` endpoint
 #### GET
 With correct username and password as basic authentication headers.

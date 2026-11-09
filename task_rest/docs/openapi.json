@@ -1,0 +1,330 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "task-rest",
+    "version": "0.1.0",
+    "description": "REST API for Taskwarrior. Tasks are addressed by their uuid, not by their numeric id. In local mode (`task-rest --no-auth`) no token is needed; in authenticated mode every endpoint except `/auth` and this documentation requires the `x-access-tokens` header."
+  },
+  "servers": [
+    { "url": "http://127.0.0.1:5000", "description": "Default local server" }
+  ],
+  "tags": [
+    { "name": "tasks", "description": "Create, list, read, modify and delete tasks" },
+    { "name": "commands", "description": "State changes such as start, stop and done" },
+    { "name": "sync", "description": "Taskwarrior server synchronization" },
+    { "name": "auth", "description": "Token issuing (authenticated mode only)" },
+    { "name": "docs", "description": "This documentation" }
+  ],
+  "security": [
+    { "tokenAuth": [] }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "tags": ["tasks"],
+        "summary": "List tasks",
+        "description": "Without parameters, returns all tasks, including completed and deleted ones. Filters are combined with AND; repeating a parameter adds another term (`?tags=work&tags=home` means `+work +home`). A bare empty value (`start=`) means the attribute is NOT set; use `start.any=` for 'is set'. Unknown attributes, invalid dates or unsafe values return 400.",
+        "operationId": "listTasks",
+        "parameters": [
+          { "$ref": "#/components/parameters/StatusFilter" },
+          { "name": "status.not", "in": "query", "description": "status:not. Example: `completed`", "schema": { "type": "string" } },
+          { "name": "project", "in": "query", "description": "project:\"NAME\"", "schema": { "type": "string" } },
+          { "name": "project.has", "in": "query", "schema": { "type": "string" } },
+          { "name": "project.not", "in": "query", "schema": { "type": "string" } },
+          { "name": "project.any", "in": "query", "description": "Empty value: the task has a project", "schema": { "type": "string", "maxLength": 0 } },
+          { "name": "project.none", "in": "query", "description": "Empty value: the task has no project", "schema": { "type": "string", "maxLength": 0 } },
+          { "name": "priority", "in": "query", "description": "priority:H, M or L", "schema": { "type": "string" } },
+          { "name": "priority.not", "in": "query", "schema": { "type": "string" } },
+          { "name": "priority.any", "in": "query", "schema": { "type": "string", "maxLength": 0 } },
+          { "name": "priority.none", "in": "query", "schema": { "type": "string", "maxLength": 0 } },
+          { "name": "description.has", "in": "query", "schema": { "type": "string" } },
+          { "name": "description.not", "in": "query", "schema": { "type": "string" } },
+          { "name": "tags", "in": "query", "description": "+TAG (has this tag)", "schema": { "type": "string" } },
+          { "name": "tags.not", "in": "query", "description": "-TAG (does not have this tag)", "schema": { "type": "string" } },
+          { "name": "tags.any", "in": "query", "description": "Empty value: has at least one tag", "schema": { "type": "string", "maxLength": 0 } },
+          { "name": "tags.none", "in": "query", "description": "Empty value: has no tags", "schema": { "type": "string", "maxLength": 0 } },
+          { "name": "uuid", "in": "query", "description": "The task with this uuid", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "start", "in": "query", "description": "Date attributes: start, due, scheduled, wait, entry and end accept `attr=DATE`, `attr.before=DATE`, `attr.after=DATE`, `attr.not=DATE`, `attr.any=` and `attr.none=`. DATE is YYYY-MM-DD, YYYY-MM-DDTHH:MM[:SS][Z], or one of now, today, sod, eod, yesterday, tomorrow, sow, eow, som, eom, soy, eoy. Example: `start.any=`, `due.before=2026-12-31`. The same applies to due, scheduled, wait, entry and end.", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "The matching tasks",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TaskList" } } }
+          },
+          "400": { "$ref": "#/components/responses/Error" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["tasks"],
+        "summary": "Create a task",
+        "operationId": "createTask",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NewTask" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "The created task and a success message",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TaskMessage" } } }
+          },
+          "400": { "$ref": "#/components/responses/Error" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/{task_uuid}": {
+      "parameters": [
+        { "$ref": "#/components/parameters/TaskUuid" }
+      ],
+      "get": {
+        "tags": ["tasks"],
+        "summary": "Get one task",
+        "operationId": "getTask",
+        "responses": {
+          "200": {
+            "description": "The task",
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "task": { "$ref": "#/components/schemas/Task" } } } } }
+          },
+          "404": { "$ref": "#/components/responses/Error" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "put": {
+        "tags": ["tasks"],
+        "summary": "Modify a task",
+        "description": "Only the fields sent are changed.",
+        "operationId": "modifyTask",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TaskChanges" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "The modified task and a success message",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TaskMessage" } } }
+          },
+          "400": { "$ref": "#/components/responses/Error" },
+          "404": { "$ref": "#/components/responses/Error" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "delete": {
+        "tags": ["tasks"],
+        "summary": "Delete a task",
+        "operationId": "deleteTask",
+        "responses": {
+          "200": {
+            "description": "The deleted task and an info message",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TaskMessage" } } }
+          },
+          "404": { "$ref": "#/components/responses/Error" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/{task_uuid}/{command}": {
+      "parameters": [
+        { "$ref": "#/components/parameters/TaskUuid" },
+        {
+          "name": "command",
+          "in": "path",
+          "required": true,
+          "description": "The action to perform on the task",
+          "schema": {
+            "type": "string",
+            "enum": ["done", "restore", "start", "stop", "add_annotation", "remove_annotation", "add_dependency", "remove_dependency"]
+          }
+        }
+      ],
+      "put": {
+        "tags": ["commands"],
+        "summary": "Run a command on a task",
+        "description": "`add_annotation` and `remove_annotation` take `{\"description\": \"...\"}`. `add_dependency` and `remove_dependency` take `{\"uuid\": \"<other task uuid>\"}`. The other commands take no body.",
+        "operationId": "runTaskCommand",
+        "requestBody": {
+          "required": false,
+          "content": { "application/json": { "schema": { "type": "object", "properties": { "description": { "type": "string" }, "uuid": { "type": "string", "format": "uuid" } } } } }
+        },
+        "responses": {
+          "200": {
+            "description": "The task and an info message",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TaskMessage" } } }
+          },
+          "400": { "$ref": "#/components/responses/Error" },
+          "404": { "$ref": "#/components/responses/Error" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/sync": {
+      "get": {
+        "tags": ["sync"],
+        "summary": "Synchronize with the Taskwarrior server",
+        "description": "Requires a Taskwarrior sync server configured in the user's taskrc. Without one the error comes back with HTTP 200 (a known issue).",
+        "operationId": "syncTasks",
+        "responses": {
+          "200": {
+            "description": "Sync result",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Message" } } }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/auth": {
+      "get": {
+        "tags": ["auth"],
+        "summary": "Get an access token",
+        "description": "Only in authenticated mode. Send HTTP Basic credentials; the returned token goes in the `x-access-tokens` header. Tokens are invalidated when the server restarts.",
+        "operationId": "getToken",
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "A JWT",
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "token": { "type": "string" } } } } }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/docs/openapi.json": {
+      "get": {
+        "tags": ["docs"],
+        "summary": "This OpenAPI document",
+        "operationId": "getOpenApi",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "This document",
+            "content": { "application/json": { "schema": { "type": "object" } } }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "tokenAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-access-tokens",
+        "description": "Token from GET /auth. Not required in local mode."
+      }
+    },
+    "parameters": {
+      "TaskUuid": {
+        "name": "task_uuid",
+        "in": "path",
+        "required": true,
+        "description": "The task's uuid (not its numeric id)",
+        "schema": { "type": "string", "format": "uuid" }
+      },
+      "StatusFilter": {
+        "name": "status",
+        "in": "query",
+        "description": "status:pending, completed, deleted, waiting or recurring",
+        "schema": { "type": "string" }
+      }
+    },
+    "responses": {
+      "Error": {
+        "description": "Error",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Message" } } }
+      },
+      "Unauthorized": {
+        "description": "Missing or invalid token (authenticated mode)",
+        "content": { "text/plain": { "schema": { "type": "string", "example": "Could not verify" } } }
+      }
+    },
+    "schemas": {
+      "Message": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "object",
+            "properties": {
+              "description": { "type": "string" },
+              "type": { "type": "string", "enum": ["success", "info", "error"] }
+            }
+          }
+        }
+      },
+      "TaskMessage": {
+        "type": "object",
+        "properties": {
+          "task": { "$ref": "#/components/schemas/Task" },
+          "message": { "$ref": "#/components/schemas/Message/properties/message" }
+        }
+      },
+      "TaskList": {
+        "type": "object",
+        "properties": {
+          "tasks": { "type": "array", "items": { "$ref": "#/components/schemas/Task" } }
+        }
+      },
+      "Task": {
+        "type": "object",
+        "description": "Read-only fields are only returned, never accepted.",
+        "properties": {
+          "uuid": { "type": "string", "format": "uuid", "readOnly": true },
+          "description": { "type": "string" },
+          "status": { "type": "string", "readOnly": true },
+          "id": { "type": "integer", "readOnly": true, "description": "Changes when tasks are completed; use uuid" },
+          "entry": { "type": "string", "readOnly": true, "description": "RFC 2822 date" },
+          "modified": { "type": "string", "readOnly": true },
+          "end": { "type": "string", "readOnly": true },
+          "urgency": { "type": "number", "readOnly": true },
+          "project": { "type": "string" },
+          "priority": { "type": "string", "description": "H, M or L" },
+          "tags": { "type": "array", "items": { "type": "string" } },
+          "due": { "type": "string", "description": "RFC 2822 date" },
+          "scheduled": { "type": "string" },
+          "start": { "type": "string" },
+          "until": { "type": "string" },
+          "recur": { "type": "string", "description": "Recurrence period, e.g. `weekly`" },
+          "annotations": { "type": "array", "readOnly": true, "items": { "$ref": "#/components/schemas/Annotation" } },
+          "depends": { "type": "array", "readOnly": true, "items": { "type": "object", "properties": { "uuid": { "type": "string" }, "description": { "type": "string" } } } }
+        }
+      },
+      "NewTask": {
+        "type": "object",
+        "required": ["description"],
+        "properties": {
+          "description": { "type": "string" },
+          "project": { "type": "string" },
+          "priority": { "type": "string", "description": "H, M or L" },
+          "tags": { "type": "array", "items": { "type": "string" } },
+          "due": { "type": "string", "description": "RFC 2822 or ISO date" },
+          "scheduled": { "type": "string" },
+          "start": { "type": "string" },
+          "until": { "type": "string" },
+          "recur": { "type": "string" }
+        }
+      },
+      "TaskChanges": {
+        "type": "object",
+        "description": "Any subset of the writable fields of NewTask",
+        "properties": {
+          "description": { "type": "string" },
+          "project": { "type": "string" },
+          "priority": { "type": "string" },
+          "tags": { "type": "array", "items": { "type": "string" } },
+          "due": { "type": "string" },
+          "scheduled": { "type": "string" },
+          "start": { "type": "string" },
+          "until": { "type": "string" },
+          "recur": { "type": "string" }
+        }
+      },
+      "Annotation": {
+        "type": "object",
+        "properties": {
+          "description": { "type": "string" },
+          "entry": { "type": "string", "readOnly": true }
+        }
+      }
+    }
+  }
+}

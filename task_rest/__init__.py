@@ -1,7 +1,7 @@
 import os
 import re
 
-from flask import Flask, jsonify, make_response, request
+from flask import Flask, jsonify, make_response, request, send_from_directory
 from flask_cors import CORS
 from flask_restful import Api
 from tasklib import TaskWarrior
@@ -17,6 +17,8 @@ from os.path import join
 LOCAL_ORIGIN_RE = re.compile(r'^https?://(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$')
 # Local mode bound to loopback: only these Host headers are accepted (blocks DNS rebinding).
 LOCAL_HOST_RE = re.compile(r'^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$')
+# Static API documentation, served without authentication in every mode.
+DOCS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'docs')
 
 def create_app(auth_enabled=True, local_only=False):
     """Create the API.
@@ -51,6 +53,20 @@ def create_app(auth_enabled=True, local_only=False):
                         'description': 'Forbidden: this server only accepts local Host headers.',
                         'type': 'error'
                     }}), 403)
+
+    # Documentation: public in both modes. Registered after the local Host check above,
+    # so that check still applies to these routes.
+    @app.route('/docs/openapi.json')
+    def openapi_spec():
+        return send_from_directory(DOCS_DIR, 'openapi.json', mimetype='application/json')
+
+    @app.before_request
+    def browsers_get_the_docs_page():
+        # Only GET / from a client that prefers HTML gets the page. API clients (curl, scripts,
+        # or no Accept header) keep receiving the JSON task list. JSON wins ties.
+        if request.method == 'GET' and request.path == '/' and \
+                request.accept_mimetypes.best_match(['application/json', 'text/html']) == 'text/html':
+            return send_from_directory(DOCS_DIR, 'index.html', mimetype='text/html')
 
     api = Api(app)
     if auth_enabled:
