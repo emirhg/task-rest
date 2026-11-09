@@ -16,7 +16,7 @@ Restful API for taskwarrior built with flask and tasklib.
 ## Quick start
 
 ### 1. Prerequisites
-- Python 3.9 and `pipenv`.
+- Python 3.14 and `pipenv` (or `pipx`, see "Install with pipx" below).
 - Taskwarrior 3.0 or newer: `task --version`.
 - A Taskwarrior config file. If you have never used Taskwarrior, create an empty one:
   `touch ~/.taskrc`. Without it every request fails with "Cannot proceed without rc file.".
@@ -25,6 +25,13 @@ Restful API for taskwarrior built with flask and tasklib.
     git clone https://github.com/emirhg/task-rest.git
     cd task-rest
     pipenv install
+
+#### Install with pipx (alternative)
+pipx installs the project as a `task-rest` command in its own environment. Use Python 3.14 or
+newer (pipx picks the default interpreter; add `--python <path>` if that is older):
+
+    pipx install /path/to/task-rest      # or: pipx install git+https://github.com/emirhg/task-rest.git
+    task-rest --no-auth                  # same as: pipenv run serve_local
 
 ### 3. Start without authentication (simplest)
 This mode uses your own Taskwarrior data (`~/.task` and `~/.taskrc`) and listens on
@@ -85,7 +92,7 @@ kept in `instance/dev/`. Do not use it outside of trying the API:
     FLASK_APP=task_rest FLASK_ENV=development pipenv run flask run
     curl -s -u dev:password http://127.0.0.1:5000/auth
 
-For deploying the Flask app see https://flask.palletsprojects.com/en/2.0.x/deploying/index.html.
+For deploying the Flask app see https://flask.palletsprojects.com/en/stable/deploying/.
 
 ## Running without authentication (local mode)
 Taskwarrior has no users, so a single-user machine can run the API without tokens. Local mode
