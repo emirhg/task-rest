@@ -8,7 +8,7 @@ import pytest
 from task_rest import create_app
 from tasklib import TaskWarrior
 import jwt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 
 @pytest.fixture(autouse=True)
@@ -54,8 +54,8 @@ def tw(taskrc, taskdata):
 def token():
     token = jwt.encode({
         'public_id': 'dev',
-        'iat': datetime.utcnow(),
-        'exp': datetime.utcnow() \
+        'iat': datetime.now(timezone.utc),
+        'exp': datetime.now(timezone.utc) \
         + timedelta(minutes=6)
     }, 'SECRET_KEY', algorithm="HS256")
     return token

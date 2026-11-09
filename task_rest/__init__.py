@@ -1,3 +1,4 @@
+import os
 import re
 
 from flask import Flask, jsonify, make_response, request
@@ -32,9 +33,8 @@ def create_app(auth_enabled=True, local_only=False):
     app.config['AUTH_ENABLED'] = auth_enabled
 
     if auth_enabled:
-        # TODO: app.config["ENV"] was removed in Flask 2.3/3; replace with an explicit
-        # environment setting when porting to Flask 3 (pinned to Flask 2.x for now).
-        if app.config["ENV"] == "production":
+        # app.config["ENV"] was removed in Flask 2.3; read FLASK_ENV directly (default: production).
+        if os.environ.get("FLASK_ENV", "production") == "production":
             app.config.from_object(ProductionConfig())
         else:
             app.config.from_object(DevelopmentConfig())

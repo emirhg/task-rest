@@ -6,7 +6,7 @@ from marshmallow import ValidationError
 from tasklib import TaskWarrior, Task
 from tasklib.backends import TaskWarriorException
 from werkzeug.security import check_password_hash
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 import jwt
 
@@ -232,8 +232,8 @@ class AuthResource(Resource):
 
             token = jwt.encode({
                 'public_id': auth.username,
-                'iat': datetime.utcnow(),
-                'exp': datetime.utcnow() + timedelta(minutes=current_app.config['USER_CONF'][auth.username]['TOKEN_EXP'])
+                'iat': datetime.now(timezone.utc),
+                'exp': datetime.now(timezone.utc) + timedelta(minutes=current_app.config['USER_CONF'][auth.username]['TOKEN_EXP'])
             }, current_app.config['SECRET_KEY'], algorithm="HS256")
             return jsonify({'token': token})
         return make_response('Could not verify', 401, {'WWW.Authentification': 'Basic realm: "login required"'})

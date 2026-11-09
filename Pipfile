@@ -9,20 +9,17 @@ pytest = "*"
 python-dotenv = "*"
 
 [packages]
-# TODO: Flask/Werkzeug are pinned to 2.x; porting to Flask 3 needs changes in
-# task_rest/__init__.py (app.config["ENV"]) and task_rest/config.py (sha256 hashing).
-# Unpin only after that port.
-flask = "==2.0.1"
-werkzeug = "==2.0.1"
-flask-restful = "==0.3.9"
-marshmallow = "==3.13.0"
-flask-cors = "==3.0.10"
+flask = ">=3.1,<4"
+werkzeug = ">=3.1,<4"
+flask-restful = ">=0.3.10,<0.4"
+marshmallow = ">=4.4,<5"
+flask-cors = ">=6,<7"
 # Taskwarrior 3 support lives in the emirhg fork of tasklib (requires Taskwarrior >= 3.0).
 tasklib = {git = "https://github.com/emirhg/tasklib.git", ref = "2c855bbd47849d3932336483381e82cf1355d92f"}
-pyjwt = "==2.1.0"
+pyjwt = ">=2.15,<3"
 
 [requires]
-python_version = "3.9"
+python_version = "3.14"
 
 [scripts]
 serve = 'flask run'

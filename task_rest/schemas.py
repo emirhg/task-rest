@@ -11,14 +11,14 @@ class TaskAnnotationSchema(Schema):
 # unknown='EXCLUDE' (resources.py) silently drops it.
 class TaskSchema(Schema):
     description = fields.Str(required = True)
-    due = fields.DateTime(format="rfc", missing=None)
-    priority = fields.Str(missing=None)
-    project = fields.Str(missing=None)
-    recur = fields.Str(missing=None)
-    scheduled = fields.DateTime(format="rfc", missing=None)
-    start = fields.DateTime(format="rfc", missing=None)
-    tags = fields.List(fields.Str(), missing=None)
-    until = fields.DateTime(format="rfc", missing=None)
+    due = fields.DateTime(format="rfc", load_default=None)
+    priority = fields.Str(load_default=None)
+    project = fields.Str(load_default=None)
+    recur = fields.Str(load_default=None)
+    scheduled = fields.DateTime(format="rfc", load_default=None)
+    start = fields.DateTime(format="rfc", load_default=None)
+    tags = fields.List(fields.Str(), load_default=None)
+    until = fields.DateTime(format="rfc", load_default=None)
 
     # read-only
     annotations = fields.List(fields.Nested(TaskAnnotationSchema), dump_only = True)
